@@ -99,21 +99,13 @@ async function run() {
       const result = await foodCollections.findOne(query);
       res.send(result);
     });
-    // const options = {
-    //   // Sort returned documents in ascending order by title (A->Z)
-    //   //   sort: { title: 1 },
-    //   // Include only the `title` and `imdb` fields in each returned document
-    //   projection: { title: 1, price: 1, img: 1, service_id: 1 },
-    // };
 
-    // //bookings
-
-    // app.post("/bookings", logger, async (req, res) => {
-    //   const booking = req.body;
-    //   // console.log(booking);
-    //   const result = await bookingCollection.insertOne(booking);
-    //   res.send(result);
-    // });
+    app.post("/foods", async (req, res) => {
+      const newFoods = req.body;
+      console.log(newFoods);
+      const result = await foodCollections.insertOne(newFoods);
+      res.send(result);
+    });
 
     // app.get("/bookings", verifyToken, async (req, res) => {
     //   // console.log("token", req.cookies.token);
