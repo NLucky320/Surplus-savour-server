@@ -118,6 +118,30 @@ async function run() {
     //   }
     // });
 
+    //myfoodcollection
+
+    app.get("/myFoodRequest", async (req, res) => {
+      const cursor = myFoodCollections.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    app.post("/myFoodRequest", async (req, res) => {
+      try {
+        const newFood = req.body;
+        const result = await myFoodCollections.insertOne(newFood);
+        res.send(result);
+      } catch (error) {
+        console.error("Error adding food to myFoodCollection:", error);
+        res.status(500).send("Error adding food to myFoodCollection");
+      }
+    });
+    app.get("/myFoodRequest/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email }; // Adjust this line
+      const result = await myFoodCollections.find(query).toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
