@@ -1,7 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-// const jwt = require("jsonwebtoken");
-// const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
@@ -17,7 +15,6 @@ app.use(
   })
 );
 app.use(express.json());
-// app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.znfmgop.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -30,27 +27,6 @@ const client = new MongoClient(uri, {
   },
 });
 
-// const verifyToken = async (req, res, next) => {
-//   const token = req.cookies?.token;
-//   // console.log("value of token in middleware", token);
-
-//   //no token available
-//   if (!token) {
-//     return res.status(401).send({ message: "not authorized" });
-//   }
-//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-//     //error
-//     if (err) {
-//       console.log(err);
-//       return res.status(401).send({ message: "unauthorized" });
-//     }
-//     //if token is valid decoded
-//     // console.log("value in the token", decoded);
-//     req.user = decoded;
-//     next();
-//   });
-// };
-
 async function run() {
   try {
     // Connect the client to the server (optional starting in v4.7)
@@ -59,36 +35,20 @@ async function run() {
     const foodCollections = client
       .db("foodSharing")
       .collection("foodCollection");
-    // const bookingCollection = client.db("cardoctor").collection("bookings");
 
-    //auth
-    // app.post("/jwt", async (req, res) => {
-    //   // console.log("Inside /jwt route handler");
-    //   const user = req.body;
-    //   // console.log(user);
-    //   const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-    //     expiresIn: "6h",
-    //   });
-    //   res
-    //     .cookie("token", token, {
-    //       httpOnly: true,
-    //       // secure: false, //http://localhost:5173/,
-    //       secure: true,
-    //       sameSite: "none",
-    //       // maxAge: '1h'
-    //     })
-    //     .send({ success: true });
-    // });
+    const myFoodCollections = client
+      .db("foodSharing")
+      .collection("myFoodCollection");
 
-    // app.post("/logout", async (req, res) => {
-    //   const user = req.body;
-    //   console.log("logout", user);
-    //   res.clearCookie("token", { maxAge: 0 }).send({ success: true });
-    // });
-
-    // //services
+    // foods collection
     app.get("/foods", async (req, res) => {
-      const cursor = foodCollections.find();
+      const { status } = req.query;
+      let query = {};
+
+      if (status) {
+        query = { food_status: status };
+      }
+      const cursor = foodCollections.find(query);
       const result = await cursor.toArray();
       result.sort((a, b) => b.food_quantity - a.food_quantity);
       res.send(result);
@@ -107,40 +67,55 @@ async function run() {
       res.send(result);
     });
 
-    // app.get("/bookings", verifyToken, async (req, res) => {
-    //   // console.log("token", req.cookies.token);
-    //   if (req.query.email !== req.user.email) {
-    //     return res.status(403).send({ message: "forbidden access" });
+    app.get("/myFood/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { "donor.email": email };
+      const result = await foodCollections.find(query).toArray();
+      res.send(result);
+    });
+
+    app.delete("/foods/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodCollections.deleteOne(query);
+      res.send(result);
+    });
+    app.put("/foods/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedFood = req.body;
+      const craft = {
+        $set: {
+          food_name: updatedFood.food_name,
+          food_quantity: updatedFood.food_quantity,
+          pickup_location: updatedFood.pickup_location,
+          expired_date: updatedFood.expired_date,
+          additional_notes: updatedFood.additional_notes,
+          food_status: updatedFood.food_status,
+          food_image: updatedFood.food_image,
+        },
+      };
+      const result = await foodCollections.updateOne(filter, craft, options);
+      res.send(result);
+    });
+    // app.put("/foods/:id", async (req, res) => {
+    //   try {
+    //     const id = req.params.id;
+    //     const filter = { _id: new ObjectId(id) };
+    //     const options = { upsert: true };
+    //     const updatedFood = req.body;
+    //     const food = {
+    //       $set: {
+    //         food_status: updatedFood.food_status,
+    //       },
+    //     };
+    //     const result = await foodCollections.updateOne(filter, food, options);
+    //     res.send(result);
+    //   } catch (error) {
+    //     console.error("Error updating food status:", error);
+    //     res.status(500).send("Error updating food status");
     //   }
-    //   let query = {};
-    //   if (req.query?.email) {
-    //     query = { email: req.query.email };
-    //   }
-    //   const result = await bookingCollection.find(query).toArray();
-    //   res.send(result);
-    // });
-
-    // app.delete("/bookings/:id", verifyToken, async (req, res) => {
-    //   const id = req.params.id;
-    //   const query = { _id: new ObjectId(id) };
-    //   const result = await bookingCollection.deleteOne(query);
-    //   res.send(result);
-    // });
-
-    // app.patch("/bookings/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const filter = { _id: new ObjectId(id) };
-    //   const updatedBooking = req.body;
-    //   // console.log(updatedBooking);
-
-    //   // Specify the update to set a value for the plot field
-    //   const updateDoc = {
-    //     $set: {
-    //       status: updatedBooking.status,
-    //     },
-    //   };
-    //   const result = await bookingCollection.updateOne(filter, updateDoc);
-    //   res.send(result);
     // });
 
     // Send a ping to confirm a successful connection
