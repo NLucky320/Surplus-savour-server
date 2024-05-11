@@ -99,6 +99,30 @@ async function run() {
       const result = await foodCollections.updateOne(filter, craft, options);
       res.send(result);
     });
+    app.patch("/foods/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const update = { $set: { food_status: "Requested" } };
+        const options = { returnOriginal: false };
+
+        const result = await foodCollections.findOneAndUpdate(
+          filter,
+          update,
+          options
+        );
+
+        if (!result.value) {
+          return res.status(404).json({ error: "Food item not found" });
+        }
+
+        res.json(result.value);
+      } catch (error) {
+        console.error("Error updating food status:", error);
+        res.status(500).send("Error updating food status");
+      }
+    });
+
     // app.put("/foods/:id", async (req, res) => {
     //   try {
     //     const id = req.params.id;
