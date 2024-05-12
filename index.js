@@ -64,6 +64,24 @@ async function run() {
       }
     });
 
+    // verify jwt middleware
+    const verifyToken = (req, res, next) => {
+      const token = req.cookies?.token;
+      if (!token)
+        return res.status(401).send({ message: "unauthorized access" });
+      if (token) {
+        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+          if (err) {
+            console.log(err);
+            return res.status(401).send({ message: "unauthorized access" });
+          }
+          console.log(decoded);
+
+          req.user = decoded;
+          next();
+        });
+      }
+    };
     // Clear token on logout
     app.get("/logout", (req, res) => {
       res
@@ -88,34 +106,37 @@ async function run() {
       result.sort((a, b) => b.food_quantity - a.food_quantity);
       res.send(result);
     });
-    app.get("/foods/:id", async (req, res) => {
+    app.get("/foods/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await foodCollections.findOne(query);
       res.send(result);
     });
 
-    app.post("/foods", async (req, res) => {
+    app.post("/foods", verifyToken, async (req, res) => {
       const newFoods = req.body;
       console.log(newFoods);
       const result = await foodCollections.insertOne(newFoods);
       res.send(result);
     });
 
-    app.get("/myFood/:email", async (req, res) => {
+    app.get("/myFood/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
       const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const query = { "donor.email": email };
       const result = await foodCollections.find(query).toArray();
       res.send(result);
     });
-
-    app.delete("/foods/:id", async (req, res) => {
+    app.delete("/foods/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await foodCollections.deleteOne(query);
       res.send(result);
     });
-    app.put("/foods/:id", async (req, res) => {
+    app.put("/foods/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -160,12 +181,17 @@ async function run() {
 
     //myfoodcollection
 
-    app.get("/myFoodRequest", async (req, res) => {
+    app.get("/myFoodRequest", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
+      const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const cursor = myFoodCollections.find();
       const result = await cursor.toArray();
       res.send(result);
     });
-    app.post("/myFoodRequest", async (req, res) => {
+    app.post("/myFoodRequest", verifyToken, async (req, res) => {
       try {
         const newFood = req.body;
         const result = await myFoodCollections.insertOne(newFood);
@@ -175,8 +201,12 @@ async function run() {
         res.status(500).send("Error adding food to myFoodCollection");
       }
     });
-    app.get("/myFoodRequest/:email", async (req, res) => {
+    app.get("/myFoodRequest/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
       const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const query = { email: email }; // Adjust this line
       const result = await myFoodCollections.find(query).toArray();
       res.send(result);
