@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
@@ -7,14 +9,14 @@ const port = process.env.PORT || 5000;
 
 console.log(process.env.DB_PASS);
 
-// MIDDLEWARE
-app.use(
-  cors({
-    origin: ["http://localhost:5173"],
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: ["http://localhost:5173", "http://localhost:5174"],
+  credentials: true,
+  optionSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.znfmgop.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -40,6 +42,26 @@ async function run() {
       .db("foodSharing")
       .collection("myFoodCollection");
 
+    app.post("/jwt", async (req, res) => {
+      try {
+        const { email } = req.body;
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN_SECRET, {
+          expiresIn: "365d",
+        });
+        res
+          .cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          })
+          .send({ success: true });
+      } catch (error) {
+        console.error("Error generating JWT token:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "Internal server error" });
+      }
+    });
     // foods collection
     app.get("/foods", async (req, res) => {
       const { status } = req.query;
@@ -122,25 +144,6 @@ async function run() {
         res.status(500).send("Error updating food status");
       }
     });
-
-    // app.put("/foods/:id", async (req, res) => {
-    //   try {
-    //     const id = req.params.id;
-    //     const filter = { _id: new ObjectId(id) };
-    //     const options = { upsert: true };
-    //     const updatedFood = req.body;
-    //     const food = {
-    //       $set: {
-    //         food_status: updatedFood.food_status,
-    //       },
-    //     };
-    //     const result = await foodCollections.updateOne(filter, food, options);
-    //     res.send(result);
-    //   } catch (error) {
-    //     console.error("Error updating food status:", error);
-    //     res.status(500).send("Error updating food status");
-    //   }
-    // });
 
     //myfoodcollection
 
