@@ -42,6 +42,7 @@ async function run() {
       .db("foodSharing")
       .collection("myFoodCollection");
 
+    //jwt
     app.post("/jwt", async (req, res) => {
       try {
         const { email } = req.body;
@@ -61,6 +62,18 @@ async function run() {
           .status(500)
           .json({ success: false, message: "Internal server error" });
       }
+    });
+
+    // Clear token on logout
+    app.get("/logout", (req, res) => {
+      res
+        .clearCookie("token", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          maxAge: 0,
+        })
+        .send({ success: true });
     });
     // foods collection
     app.get("/foods", async (req, res) => {
