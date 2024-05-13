@@ -186,8 +186,8 @@ async function run() {
     //myfoodcollection
 
     app.get("/myFoodRequest", verifyToken, async (req, res) => {
-      const tokenEmail = req.user.email;
-      const email = req.params.email;
+      const tokenEmail = req?.user?.email;
+      const email = req?.params?.email;
       if (tokenEmail !== email) {
         return res.status(403).send({ message: "forbidden access" });
       }
@@ -196,14 +196,9 @@ async function run() {
       res.send(result);
     });
     app.post("/myFoodRequest", verifyToken, async (req, res) => {
-      try {
-        const newFood = req.body;
-        const result = await myFoodCollections.insertOne(newFood);
-        res.send(result);
-      } catch (error) {
-        console.error("Error adding food to myFoodCollection:", error);
-        res.status(500).send("Error adding food to myFoodCollection");
-      }
+      const newFood = req.body;
+      const result = await myFoodCollections.insertOne(newFood);
+      res.send(result);
     });
     app.get("/myFoodRequest/:email", verifyToken, async (req, res) => {
       const tokenEmail = req.user.email;
@@ -211,7 +206,7 @@ async function run() {
       if (tokenEmail !== email) {
         return res.status(403).send({ message: "forbidden access" });
       }
-      const query = { email: email }; // Adjust this line
+      const query = { "user.email": email }; // Adjust this line
       const result = await myFoodCollections.find(query).toArray();
       res.send(result);
     });
