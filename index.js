@@ -145,7 +145,7 @@ async function run() {
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updatedFood = req.body;
-      const craft = {
+      const food = {
         $set: {
           food_name: updatedFood.food_name,
           food_quantity: updatedFood.food_quantity,
@@ -156,7 +156,7 @@ async function run() {
           food_image: updatedFood.food_image,
         },
       };
-      const result = await foodCollections.updateOne(filter, craft, options);
+      const result = await foodCollections.updateOne(filter, food, options);
       res.send(result);
     });
     app.patch("/foods/:id", async (req, res) => {
@@ -186,8 +186,8 @@ async function run() {
     //myfoodcollection
 
     app.get("/myFoodRequest", verifyToken, async (req, res) => {
-      const tokenEmail = req?.user?.email;
-      const email = req?.params?.email;
+      const tokenEmail = req.user.email;
+      const email = req.params.email;
       if (tokenEmail !== email) {
         return res.status(403).send({ message: "forbidden access" });
       }
@@ -196,9 +196,14 @@ async function run() {
       res.send(result);
     });
     app.post("/myFoodRequest", verifyToken, async (req, res) => {
-      const newFood = req.body;
-      const result = await myFoodCollections.insertOne(newFood);
-      res.send(result);
+      try {
+        const newFood = req.body;
+        const result = await myFoodCollections.insertOne(newFood);
+        res.send(result);
+      } catch (error) {
+        console.error("Error adding food to myFoodCollection:", error);
+        res.status(500).send("Error adding food to myFoodCollection");
+      }
     });
     app.get("/myFoodRequest/:email", verifyToken, async (req, res) => {
       const tokenEmail = req.user.email;
@@ -206,7 +211,7 @@ async function run() {
       if (tokenEmail !== email) {
         return res.status(403).send({ message: "forbidden access" });
       }
-      const query = { "user.email": email }; // Adjust this line
+      const query = { email: email }; // Adjust this line
       const result = await myFoodCollections.find(query).toArray();
       res.send(result);
     });
