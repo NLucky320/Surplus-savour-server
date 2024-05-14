@@ -14,6 +14,7 @@ const corsOptions = {
     "http://localhost:5173",
     "http://localhost:5174",
     "https://assignment-11-648b1.web.app",
+    "https://neon-fenglisu-7e15c0.netlify.app",
   ],
   credentials: true,
   optionSuccessStatus: 200,
@@ -97,6 +98,19 @@ async function run() {
         })
         .send({ success: true });
     });
+    //clearing Token
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("logging out", user);
+      res
+        .clearCookie("token", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          maxAge: 0,
+        })
+        .send({ success: true });
+    });
     // foods collection
     app.get("/foods", async (req, res) => {
       const { status } = req.query;
@@ -163,7 +177,12 @@ async function run() {
       try {
         const id = req.params.id;
         const filter = { _id: new ObjectId(id) };
-        const update = { $set: { food_status: "Requested" } };
+        const update = {
+          $set: {
+            food_status: "Requested",
+            available_notes: req.body.available_notes,
+          },
+        };
         const options = { returnOriginal: false };
 
         const result = await foodCollections.findOneAndUpdate(
